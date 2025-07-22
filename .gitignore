@@ -20,3 +20,35 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.python-version
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Environments
+.env
+.venv
+env/
+
+# Docker
+docker-compose.yml
+.dockerignore
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
