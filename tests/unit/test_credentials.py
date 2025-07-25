@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import patch, mock_open
 from pathlib import Path
-from credenti.credentials import Credentials
-from authenticator.msg.message import MsgCode
+from credentials.credentials import Credentials
+from credentials.message.msg_code import MsgCode
 
 class TestCredentials(unittest.TestCase):
     
@@ -14,8 +14,10 @@ class TestCredentials(unittest.TestCase):
         # Test successful credential creation.
         creds = Credentials()
         result = creds.create_credentials(
-            email="test@example.com",
-            password="securepassword123"
+            username = None,
+            email = "test@example.com",
+            password = "securepassword123",
+            additional_data= None
         )
         self.assertEqual(result, MsgCode.SUCCESS)
     
@@ -23,8 +25,8 @@ class TestCredentials(unittest.TestCase):
         # Test valid credential verification.
         creds = Credentials()
         creds.create_credentials(
-            email="test@example.com",
-            password="securepassword123"
+            email = "test@example.com",
+            password = "securepassword123"
         )
         result = creds.verify_credentials(
             email="test@example.com",

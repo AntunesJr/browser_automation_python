@@ -20,6 +20,8 @@ Secure browser automation with credential management and encryption.
 # Activate environment:
 source .venv/bin/activate
 
+pip install -r requirements.txt
+
 # Run tests:
 ./scripts/run_tests.sh
 ```

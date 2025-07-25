@@ -28,13 +28,13 @@ from pathlib import Path
 # Tripe import strategy.
 try:
     # Try to import as part of the installed package.
-    from authenticator.Credentials import Credentials
-    from authenticator.msg.Message import MsgCode
+    from credentials.credentials import Credentials
+    from credentials.message.msg_code import MsgCode
 except ImportError:
     try:
         # Attempt relative import.
-        from ..Credentials import Credentials
-        from ..msg.Message import MsgCode
+        from ..credentials import Credentials
+        from ..message.msg_code import MsgCode
     except ImportError:
         try:
             # Adds the root directory to the path.
@@ -42,18 +42,17 @@ except ImportError:
             root_dir = current_dir.parent.parent
             sys.path.insert(0, str(root_dir))
             
-            from authenticator.Credentials import Credentials
-            from authenticator.msg.Message import MsgCode
+            from credentials.credentials import Credentials
+            from credentials.message.msg_code import MsgCode
         except ImportError as e:
             print(f"Critical import error: {e}")
             sys.exit(255)
 
 def main():
     __creds = Credentials()
-    __result00 = __creds._checkDirectory()
-    __result01 = __creds._checkCredentials()
-    __result02 = __creds._checkKey()
-    
+    __result00, __result01, __result02 = __creds.checker()
+    if __result00 and __result01 and __result02 == 0:
+        __result03 = __creds.verify_credentials
     # Packs the 3 integers (4 bytes each).
     buffer = struct.pack('iii', __result00, __result01, __result02)
     sys.stdout.buffer.write(buffer)

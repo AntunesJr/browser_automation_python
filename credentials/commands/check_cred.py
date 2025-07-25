@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # ==============================================
-# authenticator/commands/checkcred.py
+# authenticator/commands/check_cred.py
 # version: 0.0.3
 # author: silvioantunes1@hotmail.com
 # ==============================================
@@ -63,13 +63,13 @@ SUCCESS_MESSAGES = {
 }
 
 def main():
-    creds = Credentials()
-    
+    __creds = Credentials()
+    __result00, __result01, __result02 = __creds.checker()
     # Perform verifications
     results = {
-        "directory": creds._checkDirectory(),
-        "credentials": creds._checkCredentials(),
-        "key": creds._checkKey()
+        "directory": __result00,
+        "credentials": __result01,
+        "key": __result02
     }
     
     # Display formatted results
@@ -77,31 +77,31 @@ def main():
     print("=" * 50)
     
     for check_name, code in results.items():
-        title = CHECK_TITLES[check_name]
+        title = CHECK_TITLES[ check_name ]
         
         if code == 0:
             status = "\033[1;32mSUCCESS\033[0m"
-            message = SUCCESS_MESSAGES[check_name]
+            message = SUCCESS_MESSAGES[ check_name ]
         else:
             status = "\033[1;31mERROR\033[0m"
-            message = Message(code)
+            message = MessageHandler(code)
         
         print(f"{title}:")
         print(f"  Status: {status}")
         print(f"  Code: {code}")
         print(f"  Message: {message}")
         print("-" * 50)
-    
+
     # Check if all verifications succeeded
     all_success = all(code == 0 for code in results.values())
     print("\nOverall Status:")
     if all_success:
-        print("\033[1;32mALL VERIFICATIONS SUCCEEDED!\033[0m")
+        print( "\033[1;32mALL VERIFICATIONS SUCCEEDED!\033[0m" )
     else:
-        print("\033[1;31mVERIFICATION ISSUES DETECTED. PLEASE CORRECT THE ERRORS ABOVE.\033[0m")
-    
+        print( "\033[1;31mVERIFICATION ISSUES DETECTED. PLEASE CORRECT THE ERRORS ABOVE.\033[0m" )
+
     # Exit code: 0 if all OK, 1 if any error
-    sys.exit(0 if all_success else 1)
+    sys.exit( 0 if all_success else 1 )
 
 if __name__ == "__main__":
     main()

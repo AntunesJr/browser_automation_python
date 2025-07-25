@@ -3,11 +3,11 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="browser_automation",
+    name="browser_automation-python",
     version="0.1.0",
     author="Silvio Antunes",
     author_email="silvioantunes1@hotmail.com",
-    description="Browser automation",
+    description="Browser automation in python",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     license="GPL-3.0",
@@ -18,9 +18,9 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "check_cred=authenticator.commands.check_cred:main",
-            "check_cred_bin=authenticator.commands.check_cred_bin:main",
-            "check_cred_json=authenticator.commands.check_cred_json:main",
+            "check_cred=credentials.commands.check_cred:main",
+            "check_cred_bin=credentials.commands.check_cred_bin:main",
+            "check_cred_json=credentials.commands.check_cred_json:main",
         ],
     },
     classifiers=[

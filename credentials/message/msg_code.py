@@ -8,39 +8,51 @@
 from enum import IntEnum
 
 # Internal message codes.
-class MsgCode( IntEnum ):  # Fixed: was __MsgCode
+class _MsgCode( IntEnum ):
     SUCCESS = 0
+    
     # Input/Validation Errors (100-119)
     INVALID_TYPE = 100
     MISSING_KEY_FILE = 101
     MISSING_CREDENTIALS_FILE = 102
-    INVALID_CREDENTIALS = 103
-    DIRECTORY_ERROR = 104
+    MISSING_DIR = 103
 
     # Encryption/Decryption Errors (120-139)
     ENCRYPTION_ERROR = 120
     ENCRYPTION_FERNET_ERROR = 121
     DECRYPTION_ERROR = 122
     DECRYPTION_FERNET_ERROR = 123
-    
+
     # Permission Errors (140-149)
     PERMISSION_ERROR = 140
-    PERMISSION_KEY_ERROR = 141
-    PERMISSION_CREDENTIALS_ERROR = 142
-    
+    PERMISSION_KEY_FILE_ERROR = 141
+    PERMISSION_CREDENTIALS_FILE_ERROR = 142
+
     # I/O Errors (150-159)
     IO_ERROR = 150
-    
-    # Key Management Errors (160-179)
+    IO_KEY_ERROR = 151
+    IO_CREDENTIALS_ERROR = 152
+    IO_DIR_ERROR = 153
+
+    # Key Management Errors (160-169)
     PROVIDED_KEY_NULL = 160
     SAVING_KEY_ERROR = 161
     CREATE_KEY_ERROR = 162
     FERNET_NULL = 163
     LOADING_KEY_ERROR = 164
     
+    # Credentials Management Erros (170 - 179)
+    CREDENTIALS_INVALID = 170
+    CREDENTIALS_NULL = 171
+    FIELD_NOT_FOUND = 172
+
     # Unknown Errors (250-255)
-    UNKNOWN_FERNET_ERROR = 253
-    UNKNOWN_KEY_ERROR = 254
+    UNKNOWN_DIR_ERROR = 251
+    UNKNOWN_FERNET_ERROR = 252
+    UNKNOWN_CREATE_CREDENTIALS_FILE_ERROR = 253
+    UNKNOWN_CREATE_KEY_FILE_ERROR = 254
+    UNKNOWN_CREDENTIALS_FILE_ERROR = 253
+    UNKNOWN_KEY_FILE_ERROR = 254
     UNKNOWN_ERROR = 255
 
 # Public interface for message codes.

@@ -4,9 +4,7 @@
 # author: silvioantunes1@hotmail.com
 # ==============================================
 
-"""
-Configuration module for the authenticator package.
-"""
+# Configuration module for the authenticator package.
 
 from .config import *
 

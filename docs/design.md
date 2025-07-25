@@ -6,7 +6,7 @@ This document provides a high-level design overview of the Browser Automation Fr
 ## Architecture
 
 ### Core Components
-1. **Authentication Module** (`authenticator` package)
+1. **Authentication Module** (`credentials` package)
    - Secure credential storage with AES-256 encryption
    - Key management
    - Credential verification
@@ -31,3 +31,10 @@ graph LR
     E --> F[Verification Result]
     F --> B
     B --> G[Output Formatter]
+```
+
+pip install sphinx sphinx-rtd-theme
+sphinx-quickstart docs/
+
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon']
+html_theme = 'sphinx_rtd_theme'

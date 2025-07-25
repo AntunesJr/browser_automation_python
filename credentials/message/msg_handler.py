@@ -5,6 +5,7 @@
 # author: silvioantunes1@hotmail.com
 #  ==============================================
 
+from enum import Enum
 from typing import Dict, Union
 from .msg_code import MsgCode
 
@@ -20,8 +21,8 @@ class MessageHandler:
         100: "Invalid input type provided.",
         101: "Key file is missing.",
         102: "Credentials file is missing.",
-        103: "Invalid credentials provided.",
-        
+        103: "Directory missing",
+
         # Encryption/Decryption Errors (120-139)
         120: "Error occurred during encryption.",
         121: "Error occurred during Fernet encryption.",
@@ -35,32 +36,37 @@ class MessageHandler:
         
         # I/O Errors (150-159)
         150: "I/O error occurred while accessing files.",
+        151: "I/O error occurred while accessing key file.",
+        152: "I/O error occurred while accessing credentials file.",
+        153: "I/O error occurred while accessing directory file.",
         
-        # Key Management Errors (160-179)
+        # Key Management Errors (160-169)
         160: "The provided key is null or invalid.",
         161: "Error occurred while saving the encryption key.",
         162: "Error occurred while creating the encryption key.",
         163: "Fernet encryption object is null or invalid.",
         164: "Error occurred while loading the encryption key.",
         
-        # Unknown Errors (250-255)
-        253: "Unknown error occurred during Fernet operations.",
-        254: "Unknown error occurred during key management.",
+        # Credentials Management Erros (170 - 179)
+        170: "Invalid credentials provided.",
+        171: "Null credentials file.",
+
+        # Unknown Errors (240-255)
+        249: "Unknown error occurred in directory.",
+        250: "Unknown error occurred during Fernet operations.",
+        251: "Unknown error occurred while create the credentials file.",
+        252: "Unknown error occurred while create the key file.",
+        253: "Unknown error occurred while checking the credentials file.",
+        254: "Unknown error occurred while checking the key file.",
         255: "Unknown error occurred in the system."
     }
 
-    def __init__(self, code: Union[int, 'MsgCode']) -> None:
+    def __init__( self, code: int ) -> None:
         # Initialize message with code.
         # code: Message code (int or MsgCode enum).
-    
-        if isinstance(code, MsgCode):
-            self.code = code.value
-        else:
             self.code = int( code )
     
     def __str__( self ) -> str:
-        # Return human-readable message.
-
         return self._STR_MESSAGES.get(
             self.code, 
             f"Unrecognized error code: {self.code}"
@@ -72,15 +78,13 @@ class MessageHandler:
         return f"Message(code={self.code}, message='{str(self)}')"
 
     @classmethod
-    def get( cls, code: Union[ int, 'MsgCode' ] ) -> str:
-        # Get message string for code.
-        # code: Message code (int or MsgCode enum).
-        # Returns: Human-readable message string.
-
-        if isinstance( code, MsgCode ):
+    def get(cls, code: Union[int, MsgCode]) -> str:  # Aceita int ou MsgCode
+        # Converte enum para int se necessário
+        if isinstance(code, Enum):
             code = code.value
+            
         return cls._STR_MESSAGES.get(
-            code, 
+            code,
             f"Unrecognized error code: {code}"
         )
     

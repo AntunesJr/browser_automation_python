@@ -1,8 +1,8 @@
 # ==============================================
 # authenticator/Credentials.py
-# version: 0.0.3
+# version: 0.1.0
 # author: silvioantunes1@hotmail.com
-#  ==============================================
+# ==============================================
 
 # Copyright (C) 2025 Silvio Antunes
 #
@@ -19,122 +19,118 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import os
-import json
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
-import base64
 
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-
-from credentials.config.config import (
-    CREDENTIALS_FILE,
-    KEY_FILE,
-    SECURE_FILE_MODE,
-    ensure_secure_directory,
-)
-from credentials.msg.message import MsgCode
-
+from credentials.message.msg_code import MsgCode
+from credentials.config.config import CredentialsConfig
+from credentials.core.credentials_checker import CredentialsChecker
+from credentials.crypto.crypto_manager import CryptoManager
+from credentials.core.credentials_reader import CredentialsReader
 
 class Credentials:
-    # Secure credential management with encryption.
+    # Main credentials manager with modular architecture.
 
     def __init__(
         self,
-        key_file: Optional[Path] = None,
-        credentials_file: Optional[ Path ] = None,
+        base_directory: Optional[ Path ] = None,
+        folder_name: Optional[ str ] = None,
+        credentials_filename: Optional[ str ] = None,
+        key_filename: Optional[ str ] = None
     ) -> None:
-    
-        # Initialize credentials manager.
+        # Initialize credentials manager with custom or default paths.
         # Args:
-            # key_file: Path to encryption key file.
-            # credentials_file: Path to credentials file.
+            # base_directory: Base directory for credentials folder (default: home).
+            # folder_name: Name of credentials folder (default: .credentials).
+            # credentials_filename: Name of credentials file (default: credentials.enc).
+            # key_filename: Name of key file (default: key.key).
 
-        self._credentials_file = credentials_file or CREDENTIALS_FILE
-        self._key_file = key_file or KEY_FILE
-        self._fernet: Optional[ Fernet ] = None
+        # Initialize configuration
+        self._config = CredentialsConfig(
+            base_directory = base_directory,
+            folder_name = folder_name,
+            credentials_filename = credentials_filename,
+            key_filename = key_filename
+        )
+        
+        # Initialize components
+        self._checker = CredentialsChecker( self._config )
+        self._crypto_manager = CryptoManager( self._config )
+        self._reader = CredentialsReader( self._config )
 
     def __del__( self ) -> None:
-    
         # Clean up resources on deletion.
+
+        self._config = None
+        self._checker = None
+        self._crypto_manager = None
+        self._reader = None
+
+    def checker( self ) -> Tuple[ MsgCode, MsgCode, MsgCode ]:
         
-        self._credentials_file = None
-        self._key_file = None
-        self._fernet = None
-
-    def _check_directory( self ) -> MsgCode:
-    
-        # Check if the credentials directory exists and is secure.
-        # Returns:
-            # MsgCode: Success or error code.
-
-        return ensure_secure_directory()
-
-    def _check_credentials( self ) -> MsgCode:
-    
-        # Check if credentials file exists and has secure permissions.
-        # Returns:
-            # MsgCode: Success or specific error code.
-
-        try:
-            if not self._credentials_file.exists():
-                return MsgCode.MISSING_CREDENTIALS_FILE
-            
-            if not self._check_permissions( self._credentials_file ):
-                return MsgCode.PERMISSION_CREDENTIALS_ERROR
-            
-            return MsgCode.SUCCESS
+        msg00 = self._checker.check_directory()
         
-        except PermissionError:
-            return MsgCode.PERMISSION_CREDENTIALS_ERROR
-        except OSError:
-            return MsgCode.IO_ERROR
-        except Exception:
-            return MsgCode.UNKNOWN_ERROR
-
-    def _check_key( self ) -> MsgCode:
-
-        #Check if key file exists and has secure permissions.
-        # Returns:
-            # MsgCode: Success or specific error code.
-
-        try:
-            if not self._key_file.exists():
-                return MsgCode.MISSING_KEY_FILE
-            
-            if not self._check_permissions( self._key_file ):
-                return MsgCode.PERMISSION_KEY_ERROR
-            
-            return MsgCode.SUCCESS
+        if msg00 != MsgCode.SUCCESS:
+            return msg00, None, None
         
-        except PermissionError:
-            return MsgCode.PERMISSION_KEY_ERROR
-        except OSError:
-            return MsgCode.IO_ERROR
-        except Exception:
-            return MsgCode.UNKNOWN_ERROR
+        msg01 = self._checker.check_credentials_file()
+        msg02 = self._checker.check_key_file()
+        
+        return msg00, msg01, msg02
 
-    def _check_permissions( self, file_path: Path ) -> bool:
-
-        # Verify file has secure permissions (no group/other access).
+    def create_credentials(
+        self,
+        username: Optional[ str ] = None,
+        email: Optional[ str ] = None,
+        password: Optional[ str ] = None,
+        additional_data: Optional[ Dict[ str, Any ] ] = None,
+        key_password: Optional[ str ] = None
+    ) -> MsgCode:
+        # Create and store encrypted credentials.
         # Args:
-            # file_path: Path to file being checked.
+            # username: User identifier (optional).
+            # email: User email address.
+            # password: User password.
+            # additional_data: Extra credential data (optional).
+            # key_password: Password for key derivation (optional).
         # Returns:
-            # bool: True if permissions are secure, False otherwise.
+            # MsgCode: Operation status.
 
-        try:
-            if file_path.exists():
-                stat = file_path.stat()
-                if stat.st_mode & 0o077:  # Check for group/other permissions
-                    return False
-            return True
-        except Exception:
-            return False
+        # Generate and save key
+        key_status, key = self._crypto_manager.create_key( key_password )
+        if key_status != MsgCode.SUCCESS or not key:
+            return key_status or MsgCode.CREATE_KEY_ERROR
+        
+        save_key_status = self._crypto_manager.save_key( key )
+        if save_key_status != MsgCode.SUCCESS:
+            return save_key_status
+        
+        # Prepare credentials data
+        credentials_data = {
+            'username': username,
+            'email': email,
+            'password': password,
+            'additional_data': additional_data or {}
+        }
+        
+        # Encrypt data
+        encrypt_status, encrypted_data = self._crypto_manager.encrypt_data( credentials_data )
+        if encrypt_status != MsgCode.SUCCESS or not encrypted_data:
+            return encrypt_status or MsgCode.ENCRYPTION_ERROR
+        
+        # Save encrypted data
+        return self._crypto_manager.save_encrypted_data( encrypted_data )
+    
+    def load_credentials( self ) -> Tuple[ MsgCode, Optional[ Dict[ str, Any ] ] ]:
+        # Load and decrypt stored credentials.
+        # Returns:
+            # Tuple containing:
+                # - MsgCode: Operation status.
+                # - dict: Decrypted credentials (or None on failure).
+
+        return self._reader.read_credentials()
 
     def verify_credentials( self, email: str, password: str ) -> MsgCode:
-
         # Verify provided credentials against stored credentials.
         # Args:
             # email: Email to verify.
@@ -142,182 +138,67 @@ class Credentials:
         # Returns:
             # MsgCode: Verification result.
 
-        status, credentials = self.load_credentials()
-        if status != MsgCode.SUCCESS:
-            return status
+        return self._reader.verify_login( email, password )
 
-        if not credentials:
-            return MsgCode.INVALID_CREDENTIALS
-
-        if (credentials.get( 'email' ) == email and 
-            credentials.get( 'password' ) == password ):
-            return MsgCode.SUCCESS
-
-        return MsgCode.INVALID_CREDENTIALS
-
-    def _create_key(
-        self,
-        password: Optional[ str ] = None
-    ) -> Tuple[MsgCode, Optional[bytes]]:
-
-        # Generate encryption key from password or create random key.
-        # Args:
-            # password: Optional password for key derivation.
-        # Returns:
-            #Tuple containing:
-                # - MsgCode: Operation status.
-                # - bytes: Generated encryption key (or None on failure).
-
-        try:
-            if password:
-                salt = b'stable_salt_for_consistency'
-                kdf = PBKDF2HMAC(
-                    algorithm=hashes.SHA256(),
-                    length=32,
-                    salt=salt,
-                    iterations=100000
-                )
-                key = base64.urlsafe_b64encode( kdf.derive(password.encode() ) )
-            else:
-                key = Fernet.generate_key()
-            return MsgCode.SUCCESS, key
-        except Exception:
-            return MsgCode.UNKNOWN_KEY_ERROR, None
-
-    def _load_key( self ) -> Optional[ bytes ]:
-        
-        # Load encryption key from file.
-
-        try:
-            with open( self._key_file, 'rb' ) as key_file:
-                return key_file.read()
-        except Exception:
-            return None
-
-    def _save_key( self, key: bytes ) -> MsgCode:
-
-        # Save encryption key to file with secure permissions.
-        # Args:
-            # key: Encryption key to save.
-        # Returns:
-            # MsgCode: Operation status.
-
-        try:
-            with open( self._key_file, 'wb' ) as key_file:
-                key_file.write( key )
-            os.chmod( self._key_file, SECURE_FILE_MODE )
-            return MsgCode.SUCCESS
-        except Exception:
-            return MsgCode.SAVING_KEY_ERROR
-
-    def _get_fernet( self ) -> Tuple[ MsgCode, Optional[ Fernet ]]:
-        
-        # Get Fernet instance for encryption/decryption.
+    def get_username( self ) -> Tuple[ MsgCode, Optional[ str ] ]:
+        # Get username from stored credentials.
         # Returns:
             # Tuple containing:
                 # - MsgCode: Operation status.
-                # - Fernet: Initialized Fernet instance (or None).
+                # - str: Username (or None on failure).
 
-        if self._fernet is not None:
-            return MsgCode.SUCCESS, self._fernet
-
-        key = self._load_key()
-        if not key:
-            return MsgCode.MISSING_KEY_FILE, None
-
-        try:
-            self._fernet = Fernet( key )
-            return MsgCode.SUCCESS, self._fernet
-        except Exception:
-            return MsgCode.ENCRYPTION_FERNET_ERROR, None
-
-    def create_credentials(
-        self,
-        username: Optional[ str ],
-        email: str,
-        password: str,
-        additional_data: Optional[ Dict[ str, Any ] ] = None
-    ) -> MsgCode:
-        
-        # Create and store encrypted credentials.
-        # Args:
-            # username: User identifier (optional).
-            # email: User email address.
-            # password: User password.
-            # additional_data: Extra credential data (optional).
-        # Returns:
-            # MsgCode: Operation status.
-
-        # Validate directory first.
-        dir_status = self._check_directory()
-
-        if dir_status != MsgCode.SUCCESS:
-            return dir_status
-
-        # Generate and save key.
-        key_status, key = self._create_key()
-        if key_status != MsgCode.SUCCESS or not key:
-            return key_status or MsgCode.CREATE_KEY_ERROR
-
-        save_status = self._save_key( key )
-        if save_status != MsgCode.SUCCESS:
-            return save_status
-
-        # Prepare credentials data.
-        credentials_data = {
-            'username': username or "",
-            'email': email,
-            'password': password,
-            'additional_data': additional_data or {}
-        }
-
-        # Encrypt and save credentials.
-        fernet_status, fernet = self._get_fernet()
-
-        if fernet_status != MsgCode.SUCCESS or not fernet:
-            return fernet_status or MsgCode.FERNET_NULL
-
-        try:
-            encrypted_data = fernet.encrypt(
-                json.dumps( credentials_data ).encode()
-            )
-            with open( self._credentials_file, 'wb' ) as cred_file:
-                cred_file.write( encrypted_data )
-            os.chmod( self._credentials_file, SECURE_FILE_MODE )
-            return MsgCode.SUCCESS
-        except Exception:
-            return MsgCode.ENCRYPTION_ERROR
-
-    def load_credentials( self ) -> Tuple[ MsgCode, Optional[ Dict[ str, Any ] ] ]:
-
-        # Load and decrypt stored credentials.
+        return self._reader.get_username()
+    
+    def get_email( self ) -> Tuple[ MsgCode, Optional[ str ] ]:
+        # Get email from stored credentials.
         # Returns:
             # Tuple containing:
-                # - MsgCode: Operation status
-                # - dict: Decrypted credentials (or None)
+                # - MsgCode: Operation status.
+                # - str: Email (or None on failure).
 
-        # Check files first
-        cred_status = self._check_credentials()
-        
-        if cred_status != MsgCode.SUCCESS:
-            return cred_status, None
+        return self._reader.get_email()
+    
+    def get_password( self ) -> Tuple[ MsgCode, Optional[ str ] ]:
+        # Get password from stored credentials.
+        # Returns:
+            # Tuple containing:
+                # - MsgCode: Operation status.
+                # - str: Password (or None on failure).
 
-        key_status = self._check_key()
-        
-        if key_status != MsgCode.SUCCESS:
-            return key_status, None
+        return self._reader.get_password()
+    
+    def get_additional_data( self ) -> Tuple[ MsgCode, Optional[ Dict[ str, Any ] ] ]:
+        # Get additional data from stored credentials.
+        # Returns:
+            # Tuple containing:
+                # - MsgCode: Operation status.
+                # - dict: Additional data (or None on failure).
 
-        # Get Fernet instance
-        fernet_status, fernet = self._get_fernet()
-        
-        if fernet_status != MsgCode.SUCCESS or not fernet:
-            return fernet_status or MsgCode.FERNET_NULL, None
+        return self._reader.get_additional_data()
+    
+    def get_credential_field( self, field_name: str ) -> Tuple[ MsgCode, Optional[ Any ] ]:
+        # Get specific field from credentials.
+        # Args:
+            # field_name: Name of the field to retrieve.
+        # Returns:
+            # Tuple containing:
+                # - MsgCode: Operation status.
+                # - Any: Field value (or None on failure).
 
-        # Decrypt credentials
-        try:
-            with open( self._credentials_file, 'rb' ) as cred_file:
-                encrypted_data = cred_file.read()
-                decrypted_data = fernet.decrypt( encrypted_data )
-                return MsgCode.SUCCESS, json.loads( decrypted_data.decode() )
-        except Exception:
-            return MsgCode.DECRYPTION_ERROR, None
+        return self._reader.get_credential_field( field_name )
+    
+    # Configuration access methods
+    @property
+    def credentials_file_path( self ) -> Path:
+        # Get credentials file path.
+        return self._config.credentials_file
+    
+    @property
+    def key_file_path( self ) -> Path:
+        # Get key file path.
+        return self._config.key_file
+    
+    @property
+    def credentials_directory( self ) -> Path:
+        # Get credentials directory path.
+        return self._config.credentials_dir
