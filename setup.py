@@ -18,9 +18,9 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "check_cred=credentials.commands.check_cred:main",
-            "check_cred_bin=credentials.commands.check_cred_bin:main",
-            "check_cred_json=credentials.commands.check_cred_json:main",
+            "check_exists_cred=credentials.commands.check_exists_cred:main",
+            "check_exists_cred_bin=credentials.commands.check_exists_cred_bin:main",
+            "check_exists_cred_json=credentials.commands.check_exists_cred_json:main",
         ],
     },
     classifiers=[

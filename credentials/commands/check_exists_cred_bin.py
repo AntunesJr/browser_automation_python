@@ -54,8 +54,8 @@ def main():
     if __result00 and __result01 and __result02 == 0:
         __result03 = __creds.verify_credentials
     # Packs the 3 integers (4 bytes each).
-    buffer = struct.pack('iii', __result00, __result01, __result02)
-    sys.stdout.buffer.write(buffer)
+    buffer = struct.pack( 'iii', __result00, __result01, __result02 )
+    sys.stdout.buffer.write( buffer )
 
 if __name__ == "__main__":
     main()

@@ -20,92 +20,189 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, List
 
 from credentials.message.msg_code import MsgCode
 from credentials.config.config import CredentialsConfig
+from credentials.config.config_manager import ConfigManager, ConfigInfo
 from credentials.core.credentials_checker import CredentialsChecker
 from credentials.crypto.crypto_manager import CryptoManager
 from credentials.core.credentials_reader import CredentialsReader
 
 class Credentials:
-    # Main credentials manager with modular architecture.
+    """Gerenciador principal de credenciais com suporte a múltiplas configurações."""
 
     def __init__(
         self,
-        base_directory: Optional[ Path ] = None,
-        folder_name: Optional[ str ] = None,
-        credentials_filename: Optional[ str ] = None,
-        key_filename: Optional[ str ] = None
+        config_name: Optional[str] = None,
+        base_directory: Optional[Path] = None,
+        folder_name: Optional[str] = None,
+        credentials_filename: Optional[str] = None,
+        key_filename: Optional[str] = None
     ) -> None:
-        # Initialize credentials manager with custom or default paths.
-        # Args:
-            # base_directory: Base directory for credentials folder (default: home).
-            # folder_name: Name of credentials folder (default: .credentials).
-            # credentials_filename: Name of credentials file (default: credentials.enc).
-            # key_filename: Name of key file (default: key.key).
+        """
+        Inicializa o gerenciador de credenciais.
+        Args:
+            config_name: Nome de uma configuração salva (se fornecido, outros parâmetros são ignorados)
+            base_directory: Diretório base para pasta de credenciais (default: home)
+            folder_name: Nome da pasta de credenciais (default: .credentials)
+            credentials_filename: Nome do arquivo de credenciais (default: credentials.enc)
+            key_filename: Nome do arquivo de chave (default: key.key)
+        """
+    
+        self._config_manager = ConfigManager()
 
-        # Initialize configuration
-        self._config = CredentialsConfig(
-            base_directory = base_directory,
-            folder_name = folder_name,
-            credentials_filename = credentials_filename,
-            key_filename = key_filename
+        if config_name:
+            # Usa configuração salva
+            status, config = self._config_manager.get_config( config_name )
+            if status != MsgCode.SUCCESS or not config:
+                raise ValueError(f"Configuração '{config_name}' não encontrada")
+            self._config = config
+            self._current_config_name = config_name
+        else:
+            # Cria nova configuração
+            self._config = CredentialsConfig(
+                base_directory=base_directory,
+                folder_name=folder_name,
+                credentials_filename=credentials_filename,
+                key_filename=key_filename
+            )
+            self._current_config_name = None
+        
+        # Inicializa componentes
+        self._checker = CredentialsChecker(self._config)
+        self._crypto_manager = CryptoManager(self._config)
+        self._reader = CredentialsReader(self._config)
+
+    def save_current_config(self, name: str, description: Optional[str] = None) -> MsgCode:
+        """
+        Salva a configuração atual no registro.
+        Args:
+            name: Nome para identificar a configuração
+            description: Descrição opcional
+        Returns:
+            MsgCode: Status da operação
+        """
+        status, _ = self._config_manager.register_config(
+            name=name,
+            base_directory=self._config.credentials_dir.parent,
+            folder_name=self._config.credentials_dir.name,
+            credentials_filename=self._config.credentials_file.name,
+            key_filename=self._config.key_file.name,
+            description=description
         )
         
-        # Initialize components
-        self._checker = CredentialsChecker( self._config )
-        self._crypto_manager = CryptoManager( self._config )
-        self._reader = CredentialsReader( self._config )
-
-    def __del__( self ) -> None:
-        # Clean up resources on deletion.
-
-        self._config = None
-        self._checker = None
-        self._crypto_manager = None
-        self._reader = None
-
-    def checker( self ) -> Tuple[ MsgCode, MsgCode, MsgCode ]:
+        if status == MsgCode.SUCCESS:
+            self._current_config_name = name
         
+        return status
+    
+    def load_config(self, name: str) -> MsgCode:
+        """
+        Carrega uma configuração salva.
+        Args:
+            name: Nome da configuração
+        Returns:
+            MsgCode: Status da operação
+        """
+        status, config = self._config_manager.get_config(name)
+        if status != MsgCode.SUCCESS or not config:
+            return status
+        
+        # Atualiza configuração e componentes
+        self._config = config
+        self._current_config_name = name
+        self._checker = CredentialsChecker(self._config)
+        self._crypto_manager = CryptoManager(self._config)
+        self._reader = CredentialsReader(self._config)
+        
+        return MsgCode.SUCCESS
+    
+    def list_saved_configs(self) -> List[ConfigInfo]:
+        """
+        Lista todas as configurações salvas.
+        Returns:
+            Lista de informações das configurações
+        """
+        return self._config_manager.list_configs()
+    
+    def check_config_status(self, config_name: Optional[str] = None) -> Tuple[MsgCode, Optional[Dict[str, Any]]]:
+        """
+        Verifica o status de uma configuração (atual ou especificada).
+        Args:
+            config_name: Nome da configuração (None para atual)
+        Returns:
+            Tuple contendo:
+                - MsgCode: Status da operação
+                - dict: Informações de status
+        """
+        if config_name is None:
+            # Verifica configuração atual
+            if self._current_config_name:
+                return self._config_manager.check_config_exists(self._current_config_name)
+            else:
+                # Para configuração não salva, verifica manualmente
+                status = {
+                    'directory_exists': self._config.credentials_dir.exists(),
+                    'credentials_exists': self._config.credentials_file.exists(),
+                    'key_exists': self._config.key_file.exists()
+                }
+                return MsgCode.SUCCESS, status
+        else:
+            # Verifica configuração específica
+            return self._config_manager.check_config_exists(config_name)
+    
+    def check_all_configs_status(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Verifica o status de todas as configurações salvas.
+        Returns:
+            Dicionário com status de todas as configurações
+        """
+        return self._config_manager.check_all_configs()
+    
+    def remove_saved_config(self, name: str) -> MsgCode:
+        """
+        Remove uma configuração do registro.
+        Args:
+            name: Nome da configuração
+        Returns:
+            MsgCode: Status da operação
+        """
+        return self._config_manager.remove_config(name)
+
+    # Métodos originais mantidos para compatibilidade
+    def checker(self) -> Tuple[MsgCode, MsgCode, MsgCode]:
         msg00 = self._checker.check_directory()
-        
         if msg00 != MsgCode.SUCCESS:
-            return msg00, None, None
+            return msg00, MsgCode.CREDENTIALS_NULL, MsgCode.PROVIDED_KEY_NULL
         
         msg01 = self._checker.check_credentials_file()
         msg02 = self._checker.check_key_file()
-        
         return msg00, msg01, msg02
 
     def create_credentials(
         self,
-        username: Optional[ str ] = None,
-        email: Optional[ str ] = None,
-        password: Optional[ str ] = None,
-        additional_data: Optional[ Dict[ str, Any ] ] = None,
-        key_password: Optional[ str ] = None
+        username: Optional[str] = None,
+        email: Optional[str] = None,
+        password: Optional[str] = None,
+        additional_data: Optional[Dict[str, Any]] = None,
+        key_password: Optional[str] = None
     ) -> MsgCode:
-        # Create and store encrypted credentials.
-        # Args:
-            # username: User identifier (optional).
-            # email: User email address.
-            # password: User password.
-            # additional_data: Extra credential data (optional).
-            # key_password: Password for key derivation (optional).
-        # Returns:
-            # MsgCode: Operation status.
-
-        # Generate and save key
-        key_status, key = self._crypto_manager.create_key( key_password )
+        # Garante que o diretório existe
+        ensure_status = self._config.ensure_secure_directory()
+        if ensure_status != MsgCode.SUCCESS:
+            return ensure_status
+        
+        # Gera e salva chave
+        key_status, key = self._crypto_manager.create_key(key_password)
         if key_status != MsgCode.SUCCESS or not key:
             return key_status or MsgCode.CREATE_KEY_ERROR
         
-        save_key_status = self._crypto_manager.save_key( key )
+        save_key_status = self._crypto_manager.save_key(key)
         if save_key_status != MsgCode.SUCCESS:
             return save_key_status
         
-        # Prepare credentials data
+        # Prepara dados das credenciais
         credentials_data = {
             'username': username,
             'email': email,
@@ -113,92 +210,49 @@ class Credentials:
             'additional_data': additional_data or {}
         }
         
-        # Encrypt data
-        encrypt_status, encrypted_data = self._crypto_manager.encrypt_data( credentials_data )
+        # Criptografa dados
+        encrypt_status, encrypted_data = self._crypto_manager.encrypt_data(credentials_data)
         if encrypt_status != MsgCode.SUCCESS or not encrypted_data:
             return encrypt_status or MsgCode.ENCRYPTION_ERROR
         
-        # Save encrypted data
-        return self._crypto_manager.save_encrypted_data( encrypted_data )
+        # Salva dados criptografados
+        return self._crypto_manager.save_encrypted_data(encrypted_data)
     
-    def load_credentials( self ) -> Tuple[ MsgCode, Optional[ Dict[ str, Any ] ] ]:
-        # Load and decrypt stored credentials.
-        # Returns:
-            # Tuple containing:
-                # - MsgCode: Operation status.
-                # - dict: Decrypted credentials (or None on failure).
-
+    # Outros métodos originais mantidos...
+    def load_credentials(self) -> Tuple[MsgCode, Optional[Dict[str, Any]]]:
         return self._reader.read_credentials()
 
-    def verify_credentials( self, email: str, password: str ) -> MsgCode:
-        # Verify provided credentials against stored credentials.
-        # Args:
-            # email: Email to verify.
-            # password: Password to verify.
-        # Returns:
-            # MsgCode: Verification result.
+    def verify_credentials(self, email: str, password: str) -> MsgCode:
+        return self._reader.verify_login(email, password)
 
-        return self._reader.verify_login( email, password )
-
-    def get_username( self ) -> Tuple[ MsgCode, Optional[ str ] ]:
-        # Get username from stored credentials.
-        # Returns:
-            # Tuple containing:
-                # - MsgCode: Operation status.
-                # - str: Username (or None on failure).
-
+    def get_username(self) -> Tuple[MsgCode, Optional[str]]:
         return self._reader.get_username()
     
-    def get_email( self ) -> Tuple[ MsgCode, Optional[ str ] ]:
-        # Get email from stored credentials.
-        # Returns:
-            # Tuple containing:
-                # - MsgCode: Operation status.
-                # - str: Email (or None on failure).
-
+    def get_email(self) -> Tuple[MsgCode, Optional[str]]:
         return self._reader.get_email()
     
-    def get_password( self ) -> Tuple[ MsgCode, Optional[ str ] ]:
-        # Get password from stored credentials.
-        # Returns:
-            # Tuple containing:
-                # - MsgCode: Operation status.
-                # - str: Password (or None on failure).
-
+    def get_password(self) -> Tuple[MsgCode, Optional[str]]:
         return self._reader.get_password()
     
-    def get_additional_data( self ) -> Tuple[ MsgCode, Optional[ Dict[ str, Any ] ] ]:
-        # Get additional data from stored credentials.
-        # Returns:
-            # Tuple containing:
-                # - MsgCode: Operation status.
-                # - dict: Additional data (or None on failure).
-
+    def get_additional_data(self) -> Tuple[MsgCode, Optional[Dict[str, Any]]]:
         return self._reader.get_additional_data()
     
-    def get_credential_field( self, field_name: str ) -> Tuple[ MsgCode, Optional[ Any ] ]:
-        # Get specific field from credentials.
-        # Args:
-            # field_name: Name of the field to retrieve.
-        # Returns:
-            # Tuple containing:
-                # - MsgCode: Operation status.
-                # - Any: Field value (or None on failure).
-
-        return self._reader.get_credential_field( field_name )
+    def get_credential_field(self, field_name: str) -> Tuple[MsgCode, Optional[Any]]:
+        return self._reader.get_credential_field(field_name)
     
-    # Configuration access methods
+    # Propriedades de configuração
     @property
-    def credentials_file_path( self ) -> Path:
-        # Get credentials file path.
+    def credentials_file_path(self) -> Path:
         return self._config.credentials_file
     
     @property
-    def key_file_path( self ) -> Path:
-        # Get key file path.
+    def key_file_path(self) -> Path:
         return self._config.key_file
     
     @property
-    def credentials_directory( self ) -> Path:
-        # Get credentials directory path.
+    def credentials_directory(self) -> Path:
         return self._config.credentials_dir
+    
+    @property
+    def current_config_name(self) -> Optional[str]:
+        return self._current_config_name

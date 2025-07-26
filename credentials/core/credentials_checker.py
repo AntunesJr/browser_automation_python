@@ -48,7 +48,7 @@ class CredentialsChecker:
         except OSError:
             return MsgCode.IO_DIR_ERROR
         except Exception:
-            return MsgCode.UNKNOWN_DIR_FILE_ERROR
+            return MsgCode.UNKNOWN_DIR_ERROR
     
     
     def check_credentials_file( self ) -> MsgCode:
