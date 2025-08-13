@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Python Browser Controller",
+  "version": "1.0",
+  "description": "Controla o navegador via Python",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "scripting",
+    "nativeMessaging"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "externally_connectable": {
+    "matches": [
+      "*://localhost/*"
+    ]
+  }
+}

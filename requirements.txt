@@ -1,0 +1,34 @@
+# Dependências do Projeto de Automação de Browsers
+# Execute: pip install -r requirements.txt
+
+# Selenium para automação web
+selenium>=4.15.0
+
+# Controle de teclado e mouse
+pynput>=1.7.6
+
+# Requests para HTTP (se necessário)
+requests>=2.31.0
+
+# Utilitários de sistema
+psutil>=5.9.0
+
+# JSON e manipulação de dados
+jsonschema>=4.19.0
+
+# Logging avançado
+coloredlogs>=15.0.1
+
+# Geração de User-Agents
+fake-useragent>=1.4.0
+
+# Controle de processos
+plyer>=2.1.0
+
+cryptography>=38.0.0
+setuptools>=65.5.0
+pytest>=7.4.0
+
+pip install pyautogui opencv-python pytesseract pillow
+sudo apt install wmctrl  # Para Linux (gerenciar workspaces)
+sudo apt-get install tesseract-ocr
