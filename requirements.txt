@@ -1,34 +1,61 @@
-# Dependências do Projeto de Automação de Browsers
-# Execute: pip install -r requirements.txt
+# ==============================================
+# requirements.txt - Sistema de Automação v2.0
+# Chrome DevTools Protocol + Playwright
+# ==============================================
 
-# Selenium para automação web
-selenium>=4.15.0
+# Core: Playwright para controle de browser via CDP
+playwright>=1.40.0
 
-# Controle de teclado e mouse
+# Controle de entrada (mouse/teclado)
 pynput>=1.7.6
 
-# Requests para HTTP (se necessário)
+# Sistema de credenciais e segurança
+cryptography>=38.0.0
+
+# Comunicação HTTP
 requests>=2.31.0
 
-# Utilitários de sistema
+# Monitoramento de sistema
 psutil>=5.9.0
 
-# JSON e manipulação de dados
-jsonschema>=4.19.0
-
-# Logging avançado
+# Logging melhorado
 coloredlogs>=15.0.1
 
-# Geração de User-Agents
-fake-useragent>=1.4.0
+# Utilitários Python padrão (geralmente já inclusos)
+pathlib2>=2.3.7; python_version < "3.4"
 
-# Controle de processos
-plyer>=2.1.0
-
-cryptography>=38.0.0
+# Dependências do sistema de setup
 setuptools>=65.5.0
-pytest>=7.4.0
 
-pip install pyautogui opencv-python pytesseract pillow
-sudo apt install wmctrl  # Para Linux (gerenciar workspaces)
-sudo apt-get install tesseract-ocr
+# ==============================================
+# DEPENDÊNCIAS REMOVIDAS (não são mais usadas):
+# ==============================================
+# selenium>=4.15.0          # Substituído por Playwright
+# fake-useragent>=1.4.0      # Não é mais necessário
+# jsonschema>=4.19.0         # Não é mais usado
+# plyer>=2.1.0              # Não é mais usado
+# pyautogui                  # Substituído por pynput
+# opencv-python              # Não é mais usado
+# pytesseract                # Não é mais usado
+# pillow                     # Não é mais usado
+
+# ==============================================
+# INSTALAÇÃO MANUAL NECESSÁRIA:
+# ==============================================
+# 1. Google Chrome:
+#    - Linux: Instalado automaticamente pelo custom_setup.py
+#    - macOS: brew install --cask google-chrome
+#    - Windows: Baixe de https://www.google.com/chrome/
+#
+# 2. Browsers do Playwright:
+#    python -m playwright install chromium
+#
+# 3. Dependências do sistema (Linux):
+#    sudo apt-get install python3-tk python3-dev curl wget
+#
+# ==============================================
+# USO:
+# ==============================================
+# pip install -r requirements.txt
+# python -m playwright install
+# python custom_setup.py  # Para configuração completa
