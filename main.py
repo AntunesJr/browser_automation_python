@@ -45,7 +45,7 @@ command_lock = threading.Lock()
 # Por padrão, usar botão do meio (altere conforme necessário)
 # Após identificar seus botões com --identify, você pode usar:
 # mouse.Button.button8, mouse.Button.button9, etc.
-VOICE_TRIGGER_BUTTON = mouse.Button.button8 #mouse.Button.middle  # Altere após identificar seus botões
+VOICE_TRIGGER_BUTTON = mouse.Button.middle #mouse.Button.middle  # Altere após identificar seus botões
 
 # ==============================================
 # II -> Classe para identificar botões do mouse
