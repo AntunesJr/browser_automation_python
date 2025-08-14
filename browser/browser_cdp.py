@@ -1013,7 +1013,17 @@ class BrowserCDP:
             print(f"   ❌ Erro ao pressionar Enter: {e}")
             return False
 
-    def discount_pdv(self, page_name: str = None) -> bool:
+    def discount_pdv(self, discount_value: int, page_name: str = None) -> bool:
+        """
+        Aplica desconto no PDV
+        
+        Args:
+            discount_value (int): Valor do desconto a ser aplicado
+            page_name (str, optional): Nome da página específica
+        
+        Returns:
+            bool: True se executou com sucesso, False caso contrário
+        """
         try:
             # Decide qual página usar
             page = self.get_page(page_name) if page_name else self.tab_page
@@ -1021,22 +1031,81 @@ class BrowserCDP:
                 print("   ❌ Nenhuma página PDV encontrada")
                 return False
             
-            print(f"\n⏎ Pressionando 'CONTROL+D' no PDV...")
+            print(f"\n💰 Aplicando desconto de {discount_value} no PDV...")
             
             # Garante que a página está em foco
             page.bring_to_front()
             time.sleep(0.3)
             
-            # Pressiona Enter
+            # Pressiona Control+D para abrir o campo de desconto
+            print("   🔧 Abrindo campo de desconto (Control+D)...")
             page.keyboard.down("Control")
             page.keyboard.press("d")
             page.keyboard.up("Control")
             
-            print(f"   ✅ CONTROL+D pressionado com sucesso!")
-            return True
+            # Aguarda o campo aparecer
+            time.sleep(1.5)  # Tempo para o modal/campo aparecer
+            
+            # Seletores para o campo de desconto (do mais específico para o mais genérico)
+            discount_selectors = [
+                'input[name="item*discount"]',  # Mais específico baseado no name
+                'input[data-placeholder="Desconto"]',  # Por placeholder
+                'input[type="tel"][inputmode="decimal"][maxlength="13"]',  # Por atributos específicos
+                'input.mat-input-element[maxlength="13"]',  # Por classe + maxlength
+                'input[aria-describedby*="mat-hint"][data-placeholder="Desconto"]',  # Alternativa
+                'input[type="tel"][style*="text-align: right"]'  # Por estilo
+            ]
+            
+            print("   🔍 Procurando campo de desconto...")
+            field_found = False
+            
+            for selector in discount_selectors:
+                try:
+                    # Verifica se o elemento existe e está visível
+                    element = page.locator(selector)
+                    if element.count() > 0:
+                        # Aguarda o elemento estar visível e interativo
+                        element.wait_for(state="visible", timeout=5000)
+                        
+                        # Limpa o campo primeiro
+                        element.fill("")
+                        
+                        # Preenche com o valor do desconto
+                        element.fill(str(discount_value))
+                        
+                        print(f"   ✅ Campo preenchido com {discount_value} usando seletor: {selector}")
+                        
+                        # Pressiona Enter para confirmar
+                        time.sleep(0.5)
+                        element.press("Enter")
+                        
+                        print(f"   ✅ Desconto de {discount_value} aplicado com sucesso!")
+                        field_found = True
+                        break
+                        
+                except Exception as e:
+                    print(f"   ⚠️ Falha no seletor '{selector}': {e}")
+                    continue
+            
+            if not field_found:
+                print("   ❌ Campo de desconto não encontrado com nenhum seletor")
+                print("   💡 Tentando método alternativo por posição...")
+                
+                # Método alternativo: tentar digitar diretamente após Control+D
+                try:
+                    time.sleep(0.5)
+                    page.keyboard.type(str(discount_value))
+                    page.keyboard.press("Enter")
+                    print(f"   ✅ Desconto {discount_value} inserido por método alternativo")
+                    return True
+                except Exception as e:
+                    print(f"   ❌ Método alternativo também falhou: {e}")
+                    return False
+            
+            return field_found
             
         except Exception as e:
-            print(f"   ❌ Erro ao pressionar Enter: {e}")
+            print(f"   ❌ Erro ao aplicar desconto: {e}")
             return False
 
     def change_price_pdv(self, page_name: str = None) -> bool:

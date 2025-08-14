@@ -226,8 +226,9 @@ def process_pdv_commands():
 
             elif command == 'discount':
                 if pdv_browser and pdv_ready:
-                    success = pdv_browser.discount_pdv("pdv")
-                    print(f"   ✅ {'Aplicando desconto.' if success else 'Falha ao concluir a venda.'}")
+                    discount_value = int(data)  # data contém o valor do desconto
+                    success = pdv_browser.discount_pdv(discount_value, "pdv")
+                    print(f"   ✅ Desconto de {discount_value} {'aplicado' if success else 'falha ao aplicar'}")
             
             elif command == 'change_price_pdv':
                 if pdv_browser and pdv_ready:
@@ -569,6 +570,22 @@ def process_voice_command(command_text):
                 send_command_to_pdv('set_units', units)
                 return True
         
+        #Comando: desconto com valor (ex: "desconto 10", "dar desconto de 5")
+        elif re.search(r'\bdesconto\b', command_text):
+            # Procura por números no comando
+            discount_match = remove_word(r'(\bdesconto\b+)', command_text)
+            discount_match = remove_word(r'(\breais\b+)', command_text)
+            if discount_match:
+                discount_value = int(discount_match.group(1))
+                print(f"   💰 Aplicando desconto de {discount_value}...")
+                send_command_to_pdv('discount', discount_value)
+                return True
+            else:
+                default_discount = 0
+                print(f"   💰 Aplicando desconto padrão de {default_discount}...")
+                send_command_to_pdv('apply_discount', default_discount)
+                return True
+        
         # Comando: pesquisar [produto]
         elif re.search(r'\bpesquisar\b', command_text):
             product = remove_word(command_text, "pesquisar").strip()
@@ -605,7 +622,11 @@ def process_voice_command(command_text):
             return True
         
         # Comando: abrir pdv
-        elif re.search(r'\babrir pdv\b', command_text) or re.search(r'\babrir emissor de nota fiscal\b', command_text) or re.search(r'\bnova nota fiscal\b', command_text) or re.search(r'\bemitir nova nota fiscal\b', command_text):
+        elif re.search(r'\babrir pdv\b', command_text) or re.search(r'\babrir emissor de nota fiscal\b', command_text) or 
+             re.search(r'\bnova nota fiscal\b', command_text) or re.search(r'\bemitir nova nota fiscal\b', command_text) or
+             re.search(r'\bemitir nota fiscal\b', command_text) or re.search(r'\bemitir nova nota\b', command_text) or
+             re.search(r'\babrir nota fiscal\b', command_text) or re.search(r'\babrir nota\b', command_text) or
+             re.search(r'\babrir emissor de nota fiscal\b', command_text) or re.search(r'\babrir emissor de nota \b', command_text):
             print("   🏪 Enviando comando para abrir PDV...")
             send_command_to_pdv('open_pdv')
             return True
@@ -677,7 +698,7 @@ def process_voice_command(command_text):
             return True
 
         # Comando: ajuda
-        elif re.search(r'\bpix\b', command_text):
+        elif re.search(r'\bajuda\b', command_text):
             print("\n📖 COMANDOS DISPONÍVEIS:")
             print("   • 'X unidades' - Define X unidades do produto (ex: '10 unidades')")
             print("   • 'pesquisar [produto]' - Busca produto no PDV")
