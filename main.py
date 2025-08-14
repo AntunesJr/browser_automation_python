@@ -622,11 +622,16 @@ def process_voice_command(command_text):
             return True
         
         # Comando: abrir pdv
-        elif re.search(r'\babrir pdv\b', command_text) or re.search(r'\babrir emissor de nota fiscal\b', command_text) or 
-             re.search(r'\bnova nota fiscal\b', command_text) or re.search(r'\bemitir nova nota fiscal\b', command_text) or
-             re.search(r'\bemitir nota fiscal\b', command_text) or re.search(r'\bemitir nova nota\b', command_text) or
-             re.search(r'\babrir nota fiscal\b', command_text) or re.search(r'\babrir nota\b', command_text) or
-             re.search(r'\babrir emissor de nota fiscal\b', command_text) or re.search(r'\babrir emissor de nota \b', command_text):
+        elif re.search(r'\babrir pdv\b', command_text) or \
+             re.search(r'\babrir emissor de nota fiscal\b', command_text) or \
+             re.search(r'\bnova nota fiscal\b', command_text) or \
+             re.search(r'\bemitir nova nota fiscal\b', command_text) or \
+             re.search(r'\bemitir nota fiscal\b', command_text) or \
+             re.search(r'\bemitir nova nota\b', command_text) or \
+             re.search(r'\babrir nota fiscal\b', command_text) or \
+             re.search(r'\babrir nota\b', command_text) or \
+             re.search(r'\babrir emissor de nota fiscal\b', command_text) or \
+             re.search(r'\babrir emissor de nota \b', command_text):
             print("   🏪 Enviando comando para abrir PDV...")
             send_command_to_pdv('open_pdv')
             return True
